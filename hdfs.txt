@@ -1,0 +1,479 @@
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get install openssh-server
+sudo apt-get install openjdk-8-jdk
+java -version
+wget https://dlcdn.apache.org/hadoop/common/hadoop-2.10.2/hadoop-2.10.2.tar.gz
+tar -xzvf hadoop-2.10.2.tar.gz
+sudo mv hadoop-2.10.2 /home/hian/hadoop/
+readlink -f /usr/bin/java | sed "s:bin/java::"
+sudo nano /home/hian/hadoop/etc/hadoop/hadoop-env.sh (to update java home)
+/usr/lib/jvm/java-8-openjdk-amd64/jre/
+/home/hian/hadoop/bin/hadoop
+
+mkdir ~/input
+cp /home/hian/hadoop/etc/hadoop/*.xml ~/input
+/home/hian/hadoop/bin/hadoop jar /home/hian/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.10.2.jar grep ~/input ~/grep_example 'principal[.]*'
+chmod +x /home/hian/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.10.2.jar (if necessary only run)
+
+cat ~/grep_example/*
+
+
+
+cd /home/hian/hadoop/etc/hadoop
+nano hdfs-site.xml
+<configuration>
+<property>
+<name>dfs.namenode.name.dir</name>
+<value>/home/hian/hadoop/data/nameNode</value>
+</property>
+<property>
+<name>dfs.datanode.data.dir</name>
+<value>/home/hian/hadoop/data/dataNode</value>
+</property>
+<property>
+<name>dfs.replication</name>
+<value>1</value>
+</property>
+</configuration>
+
+nano core-site.xml
+<configuration>
+<property>
+<name>fs.default.name</name>
+<value>hdfs://localhost:9000</value>
+</property>
+</configuration>
+
+mv mapred-site.xml.template mapred-site.xml
+nano mapred-site.xml
+<configuration>
+<property>
+<name>mapreduce.framework.name</name>
+<value>yarn</value>
+</property>
+<property>
+<name>yarn.app.mapreduce.am.resource.mb</name>
+<value>512</value>
+</property>
+<property>
+<name>mapreduce.map.memory.mb</name>
+<value>256</value>
+</property>
+<property>
+<name>mapreduce.reduce.memory.mb</name>
+<value>256</value>
+</property>
+</configuration>
+
+nano yarn-site.xml
+<configuration>
+<property>
+<name>yarn.acl.enable</name>
+<value>0</value>
+</property>
+<property>
+<name>yarn.resourcemanager.hostname</name>
+<value>localhost</value>
+</property>
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle</value>
+</property>
+<property>
+<name>yarn.nodemanager.resource.memory-mb</name>
+<value>1536</value>
+</property>
+<property>
+<name>yarn.scheduler.maximum-allocation-mb</name>
+<value>1536</value>
+</property>
+<property>
+<name>yarn.scheduler.minimum-allocation-mb</name>
+<value>128</value>
+</property>
+<property>
+<name>yarn.nodemanager.vmem-check-enabled</name>
+<value>false</value>
+</property>
+</configuration>
+
+nano .bashrc @ nano ~/.bashrc
+export /home/hian/hadoop/bin # insert at the end of the file
+source .bashrc @ source ~/.bashrc
+
+hdfs namenode -format
+cd ..
+cd hadoop/sbin
+sudo service ssh start
+./start-all.sh
+jps
+/home/hian/hadoop/bin/hadoop jar /home/hian/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.10.2.jar grep file:///home/hian/input/ ~/grep_example 'principal[.]*'
+
+hadoop fs -mkdir /user/hdfs
+hadoop fs -ls /user
+touch sample.txt
+hdfs dfs -put sample.txt /user/hdfs/sample.txt
+hadoop fs -ls /user/hdfs/
+echo "This is line 1." >> sample1.txt
+echo "This is line 2." >> sample1.txt
+echo "This is line 3." >> sample1.txt
+cat sample.txt
+hdfs dfs -appendToFile sample1.txt /user/hdfs/sample.txt
+hadoop fs -cat /user/hdfs/sample.txt
+hdfs dfs -get /user/hdfs/sample.txt
+hdfs dfs -rm /user/hdfs/sample.txt
+
+
+# Install mysql
+sudo apt-get install mysql-server
+systemctl start mysql (Linux) @ sudo service mysql start (Windows)
+sudo /usr/bin/mysql -u root
+
+# Inside mysql shell
+SET GLOBAL local_infile=1;
+CREATE DATABASE WQD7007;
+show databases;
+USE WQD7007;
+create table churn (customerID varchar(20),
+PaperlessBilling varchar(3),
+PaymentMethod varchar(30),
+MonthlyCharges numeric(8,2),
+Churn varchar(3));
+
+DESCRIBE churn;
+exit
+sudo mysql -u root --local_infile=1 WQD7007 -e "LOAD DATA LOCAL INFILE '/home/hian/Downloads/WQD7007/churn_reduced.csv' INTO TABLE churn FIELDS TERMINATED BY ','"
+@
+sudo mysql -u root --local_infile=1 WQD7007 -e "LOAD DATA LOCAL INFILE '/mnt/c/Users/ooihi/Downloads/churn_reduced.csv' INTO TABLE churn FIELDS TERMINATED BY ','"
+
+cd ~ to back to home // just a knowledge no need execute
+sudo /usr/bin/mysql -u root
+USE WQD7007;
+SELECT * FROM churn;
+
+wget https://archive.apache.org/dist/sqoop/1.4.7/sqoop-1.4.7.bin__hadoop-2.6.0.tar.gz
+tar -xzf sqoop-1.4.7.bin__hadoop-2.6.0.tar.gz
+mv sqoop-1.4.7.bin__hadoop-2.6.0 /home/hian/sqoop/
+nano .bashrc @ nano ~/.bashrc
+export PATH=$PATH:/home/hian/sqoop/bin
+source .bashrc @ source ~/.bashrc
+
+mv /home/hian/sqoop/conf/sqoop-env-template.sh /home/hian/sqoop/conf/sqoop-env.sh
+cd sqoop/conf
+nano sqoop-env.sh
+export HADOOP_COMMON_HOME=/home/hian/hadoop
+export HADOOP_MAPRED_HOME=/home/hian/hadoop
+cp /home/hian/Downloads/mysql-connector-java-5.1.47.jar /home/hian/sqoop/lib
+@
+cp /mnt/c/Users/ooihi/Downloads/mysql-connector-java-5.1.47.jar /home/hian/sqoop/lib
+
+# Set default password for mysql
+sudo /usr/bin/mysql -u root
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'abcd1234';
+exit;
+
+# Exit sql shelll and run the command to import sql to hdfs
+sqoop import -connect jdbc:mysql://localhost/WQD7007 -username root -password abcd1234 -table churn -m 1
+hdfs dfs -cat /user/hian/churn/*
+
+
+# Install Hive
+wget https://dlcdn.apache.org/hive/hive-3.1.3/apache-hive-3.1.3-bin.tar.gz
+tar -xzf apache-hive-3.1.3-bin.tar.gz
+mv apache-hive-3.1.3-bin /home/hian/hive/
+
+# Add path to bashrc
+sudo nano .bashrc @ ~/.bashrc
+export PATH=$PATH:/home/hian/hive/bin
+source ~/.bashrc
+
+# Add path to hive bin
+cd hive/bin
+sudo nano hive-config.sh
+export HADOOP_HOME=/home/hian/hadoop
+
+# Start Hadoop services
+cd ~
+sudo service ssh start
+hadoop/sbin/start-all.sh
+jps
+
+# Create Hive Warehouse
+hadoop fs -mkdir -p /user/hive/warehouse
+hadoop fs -chmod 765 /user/hive/warehouse
+
+# Navigate into the bin folder
+cd hive/bin
+./schematool -initSchema -dbType derby
+hive
+
+# Run some Hive commands
+create database wqd7007;
+show databases;
+exit;
+
+# Import csv into HDFS
+hive
+CREATE TABLE batting (
+    playerID STRING,
+    yearID INT,
+    stint INT,
+    teamID STRING,
+    lgID STRING,
+    G INT,
+    G_batting INT,
+    AB INT,
+    R INT,
+    H INT,
+    2B INT,
+    3B INT,
+    HR INT,
+    RBI INT,
+    SB INT,
+    CS INT,
+    BB INT,
+    SO INT,
+    IBB INT,
+    HBP INT,
+    SH INT,
+    SF INT,
+    GIDP INT,
+    G_old INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+TBLPROPERTIES("skip.header.line.count"="1");
+LOAD DATA LOCAL INPATH '/home/hian/Downloads/Batting.csv' INTO TABLE batting; @
+LOAD DATA INPATH '/user/hdfs/Batting.csv' INTO TABLE batting;
+
+# Perform Hive queries
+SELECT yearid, max(r) FROM batting GROUP BY yearid;
+SELECT a.yearid, a.playerid, a.r FROM batting a
+JOIN (SELECT yearid, max(r) as max_r FROM batting GROUP BY yearid) b 
+ON a.yearid = b.yearid AND a.r = b.max_r;
+
+# To save file to HDFS if necessary
+hdfs dfs -put /home/hian/Downloads/Batting.csv /user/hdfs/
+
+# Drop table
+DROP TABLE IF EXISTS batting;
+
+
+wget https://dlcdn.apache.org/pig/pig-0.17.0/pig-0.17.0.tar.gz
+tar -xzf pig-0.17.0.tar.gz
+mv pig-0.17.0 /home/hian/pig/
+
+cd ~
+sudo nano .bashrc
+export PATH=$PATH:/home/hian/pig
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/
+export PIG_CLASSPATH=$HADOOP_CONF_DIR
+source .bashrc
+
+pig
+
+batting = load '/user/hdfs/Batting.csv' using PigStorage(',');
+raw_runs = FILTER batting BY $1>0;
+DUMP raw_runs
+
+Runs = FOREACH raw_runs GENERATE $0 as playerID, $1 as year, $8 as runs;
+DUMP Runs
+
+grp_data = GROUP runs by (year);
+max_runs = FOREACH grp_data GENERATE group as grp, MAX(run.runs) as max_runs;
+DUMP max_runs
+
+join_max_run = JOIN max_runs by ($0, max_runs), runs by (year, runs);
+join_data = FOREACH join_max_run GENERATE $0 as year, $2 as playerID, $1 as run.
+DUMP join_data
+
+movies = LOAD '/user/hdfs/movies_data.csv';
+USING PigStorage(',') as (id, name, year, rating, duration);
+DUMP movies;
+
+movies_greater_than_four = FILTER movies BY (float)rating>4.0;
+DUMP movies_greater_than_four
+
+STORE movies_greater_than_four into '/user/hdfs/movies_greater_than_four';
+
+movies_between_50_60 = FILTER movies by year>1950 and year<1960;
+
+movies_starting_with_A = FILTER movies by name matches 'A.*';
+
+
+# Start Hadoop services
+cd ~
+sudo service ssh start
+hadoop/sbin/start-all.sh
+jp
+
+# Navigate into the bin folder
+cd hive/bin
+./schematool -initSchema -dbType derby
+
+# To save file to HDFS if necessary
+cd ~
+hdfs dfs -put /home/hian/Downloads/Batting.csv /user/hdfs/
+
+# Go into Hive Directory
+cd hive/bin
+hive
+show databases;
+use wqd7007;
+
+# Import csv into Hive tables
+CREATE TABLE batting (
+    playerID STRING,
+    yearID INT,
+    stint INT,
+    teamID STRING,
+    lgID STRING,
+    G INT,
+    G_batting INT,
+    AB INT,
+    R INT,
+    H INT,
+    2B INT,
+    3B INT,
+    HR INT,
+    RBI INT,
+    SB INT,
+    CS INT,
+    BB INT,
+    SO INT,
+    IBB INT,
+    HBP INT,
+    SH INT,
+    SF INT,
+    GIDP INT,
+    G_old INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+TBLPROPERTIES("skip.header.line.count"="1");
+
+LOAD DATA LOCAL INPATH '/home/hian/Downloads/Batting.csv' INTO TABLE batting; @ 
+LOAD DATA INPATH '/user/hdfs/Batting.csv' INTO TABLE batting;
+
+# Perform Hive queries
+DESCRIBE batting;
+SELECT * FROM batting LIMIT 5;
+
+# Drop table
+DROP TABLE IF EXISTS batting;
+
+
+
+
+
+
+## Another example
+
+CREATE TABLE population_data (
+    record_date DATE,
+    state STRING,
+    parlimen STRING,
+    sex STRING,
+    age STRING,
+    ethnicity STRING,
+    population DECIMAL(10, 3)
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+TBLPROPERTIES("skip.header.line.count"="1");
+
+LOAD DATA INPATH '/user/hdfs/population_parlimen.csv' INTO TABLE population_data;
+
+
+
+
+# To save file to HDFS if necessary
+cd ~
+hdfs dfs -put /home/hian/Downloads/WQD7007/sample.txt /user/hdfs/
+
+# To run wordcount map reduce
+hadoop jar /home/hian/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.10.2.jar wordcount /user/hdfs/sample.txt /user/out/
+
+# Check results
+hadoop fs -cat /user/out/part-r-00000
+
+# Import into hive
+cd hive/bin
+hive
+show databases;
+create database testing;
+use testing;
+CREATE TABLE wordcount (
+    words STRING,
+    count INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+STORED AS TEXTFILE;
+
+# Load data
+LOAD DATA INPATH '/user/out/part-r-00000' INTO TABLE wordcount;
+# Start Hadoop services
+cd ~
+sudo service ssh start
+hadoop/sbin/start-all.sh
+jps
+
+# To save file to HDFS if necessary
+cd ~
+hdfs dfs -put /home/hian/Downloads/Batting.csv /user/hdfs/
+
+# Navigate into pig
+cd ~
+pig
+
+# Import csv into Pig tables
+batting = load '/user/hdfs/Batting.csv' using PigStorage(',');
+
+# Pig queries
+raw_runs = FILTER batting BY $1>0;
+DUMP raw_runs
+
+Runs = FOREACH raw_runs GENERATE $0 as playerID, $1 as year, $8 as runs;
+DUMP Runs
+
+grp_data = GROUP runs by (year);
+max_runs = FOREACH grp_data GENERATE group as grp, MAX(run.runs) as max_runs;
+DUMP max_runs
+
+join_max_run = JOIN max_runs by ($0, max_runs), runs by (year, runs);
+join_data = FOREACH join_max_run GENERATE $0 as year, $2 as playerID, $1 as run.
+DUMP join_data
+
+
+
+# To save file to HDFS if necessary
+cd ~
+hdfs dfs -put /home/hian/Downloads/WQD7007/sample.txt /user/hdfs/
+
+# To run wordcount map reduce
+hadoop jar /home/hian/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.10.2.jar wordcount /user/hdfs/sample.txt /user/out/
+
+# Check results
+hadoop fs -cat /user/out/part-r-00000
+
+# Import into hive
+cd hive/bin
+hive
+show databases;
+create database testing;
+use testing;
+CREATE TABLE wordcount (
+    words STRING,
+    count INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+STORED AS TEXTFILE;
+
+# Load data
+LOAD DATA INPATH '/user/out/part-r-00000' INTO TABLE wordcount;
